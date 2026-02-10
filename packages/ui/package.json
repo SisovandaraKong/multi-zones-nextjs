@@ -7,6 +7,8 @@
     "./button": "./src/button.tsx",
     "./code": "./src/code.tsx",
     "./header": "./src/header.tsx",
+    "./components/icon/AppleLogo": "./src/components/icon/AppleIcon.tsx",
+    "./components/icon/Bag": "./src/components/icon/BagIcon.tsx",
     "./home/valentine-hero": "./src/home/valentine-hero.tsx",
     "./home/iphone-hero": "./src/home/iphone-hero.tsx",
     "./store/hero-store": "./src/store/hero-store.tsx",
