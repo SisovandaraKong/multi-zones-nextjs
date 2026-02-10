@@ -3,7 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./*": "./src/*.tsx"
+    "./*": "./src/*.tsx",
+    "./button": "./src/button.tsx",
+    "./code": "./src/code.tsx",
+    "./header": "./src/header.tsx",
+    "./home/valentine-hero": "./src/home/valentine-hero.tsx",
+    "./home/iphone-hero": "./src/home/iphone-hero.tsx",
+    "./store/hero-store": "./src/store/hero-store.tsx",
+    "./mac/hero-mac": "./src/mac/hero-mac.tsx",
+    "./mac/MacProduct": "./src/mac/MacProduct.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
