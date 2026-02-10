@@ -9,11 +9,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/mac/:path*',
-        destination: 'http://localhost:3001/mac/:path*',
+        destination: process.env.NEXT_PUBLIC_URL_MAC + '/mac/:path*' || 'http://localhost:3001/mac/:path*',
       },
             {
         source: '/store/:path*',
-        destination: 'http://localhost:3002/store/:path*',
+        destination: process.env.NEXT_PUBLIC_URL_STORE + '/store/:path*' || 'http://localhost:3002/store/:path*',
       },
       {
         source: '/profile/:path*',
