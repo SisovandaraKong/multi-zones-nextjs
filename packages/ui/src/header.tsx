@@ -1,15 +1,50 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, User, LogOut, UserCircle } from "lucide-react";
 import { AppleLogo } from "./components/icon/AppleLogo";
 import { BagIcon } from "./components/icon/BagIcon";
-
+import { useEffect, useState } from "react";
 
 interface AppleHeaderProps {
   zones?: { name: string; href: string }[];
+  auth?: {
+    login: {
+      title: string;
+      url: string;
+    };
+    logout: {
+      title: string;
+      url: string;
+    };
+  };
 }
 
-export function Header({ zones }: AppleHeaderProps) {
+interface ProfileData {
+  username: string;
+  email: string;
+  fullName: string;
+  profileImage: string;
+}
+
+export function Header({ zones, auth }: AppleHeaderProps) {
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const defaultAuth = {
+    login: {
+      title: "Login",
+      url: "/oauth2/authorization/itp-frontbff",
+    },
+    logout: {
+      title: "Logout",
+      url: "/logout",
+    },
+  };
+
+  const authConfig = auth || defaultAuth;
+
   const defaultZones = [
     { name: 'Store', href: '/store' },
     { name: 'Mac', href: '/mac' },
@@ -25,6 +60,52 @@ export function Header({ zones }: AppleHeaderProps) {
   ];
 
   const navItems = zones || defaultZones;
+
+  useEffect(() => {
+    async function checkAuthAndFetchProfile() {
+      try {
+        const response = await fetch("/auth/me", { credentials: "include" });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsAuthed(true);
+          setProfile(data);
+        } else {
+          setIsAuthed(false);
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        setIsAuthed(false);
+        setProfile(null);
+      } finally {
+        setLoadingAuth(false);
+      }
+    }
+
+    checkAuthAndFetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.profile-dropdown')) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getInitials = () => {
+    if (!profile?.fullName) return "U";
+    const names = profile.fullName.split(" ");
+    if (names.length >= 2) {
+      return `${names[0]?.[0] ?? ''}${names[names.length - 1]?.[0] ?? ''}`.toUpperCase();
+    }
+    return profile.fullName.substring(0, 2).toUpperCase();
+  };
 
   return (
     <header className="bg-white backdrop-blur-xl text-[#1d1d1f] sticky top-0 z-50 border-b border-gray-200/50">
@@ -65,6 +146,65 @@ export function Header({ zones }: AppleHeaderProps) {
           >
             <BagIcon className="w-[16px] h-[46px]" />
           </a>
+
+          {/* Auth Section */}
+          {!loadingAuth && (
+            <>
+              {!isAuthed ? (
+                <a 
+                  href={authConfig.login.url}
+                  className="hover:opacity-70 transition-opacity flex items-center"
+                  aria-label="Login"
+                >
+                  <User className="w-[14px] h-[44px]" />
+                </a>
+              ) : (
+                <div className="relative profile-dropdown">
+                  <button
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    className="hover:opacity-70 transition-opacity flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-semibold text-gray-800"
+                    aria-label="Profile"
+                    title={profile?.fullName}
+                  >
+                    {profile?.profileImage ? (
+                      <img 
+                        src={profile.profileImage} 
+                        alt={profile.fullName}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      getInitials()
+                    )}
+                  </button>
+
+                  {showDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 text-sm">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <p className="font-semibold text-gray-900">{profile?.fullName}</p>
+                        <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
+                      </div>
+                      <a 
+                        href="/profile"
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
+                      >
+                        <UserCircle className="w-4 h-4 mr-2" />
+                        <span>Profile</span>
+                      </a>
+                      <div className="border-t border-gray-200 mt-1 pt-1">
+                        <a
+                          href={authConfig.logout.url}
+                          className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          <span>{authConfig.logout.title}</span>
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           {/* Mobile Menu Button */}
           <button 
