@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, User, LogOut, UserCircle } from "lucide-react";
+import { Search, User, LogOut, UserCircle, X } from "lucide-react";
 import { AppleLogo } from "./components/icon/AppleLogo";
 import { BagIcon } from "./components/icon/BagIcon";
 import { useEffect, useState } from "react";
@@ -31,6 +31,7 @@ export function Header({ zones, auth }: AppleHeaderProps) {
   const [isAuthed, setIsAuthed] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const defaultAuth = {
     login: {
@@ -98,6 +99,18 @@ export function Header({ zones, auth }: AppleHeaderProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (showMobileMenu) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showMobileMenu]);
+
   const getInitials = () => {
     if (!profile?.fullName) return "U";
     const names = profile.fullName.split(" ");
@@ -108,139 +121,228 @@ export function Header({ zones, auth }: AppleHeaderProps) {
   };
 
   return (
-    <header className="bg-white backdrop-blur-xl text-[#1d1d1f] sticky top-0 z-50 border-b border-gray-200/50">
-      <nav className="max-w-[980px] mx-auto px-5 h-11 flex items-center justify-between text-xs">
-        {/* Apple Logo */}
-        <a href="/" className="hover:opacity-70 transition-opacity flex items-center">
-            <AppleLogo className="w-[14px] h-[44px]" />
-        </a>
-
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center space-x-8">
-          {navItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="hover:opacity-70 transition-opacity whitespace-nowrap"
-            >
-              {item.name}
-            </a>
-          ))}
-        </div>
-
-        {/* Search & Bag Icons */}
-        <div className="flex items-center space-x-4">
-          {/* Search Icon */}
-          <button 
-            className="hover:opacity-70 transition-opacity"
-            aria-label="Search"
-          >
-            <Search className="w-[14px] h-[44px]" />
-          </button>
-
-          {/* Shopping Bag Icon */}
-          <a 
-            href="/card" 
-            className="hover:opacity-70 transition-opacity"
-            aria-label="Shopping Bag"
-          >
-            <BagIcon className="w-[16px] h-[46px]" />
+    <>
+      <header className="bg-white backdrop-blur-xl text-[#1d1d1f] sticky top-0 z-50 border-b border-gray-200/50">
+        <nav className="max-w-[980px] mx-auto px-5 h-11 flex items-center justify-between text-xs">
+          {/* Apple Logo */}
+          <a href="/" className="hover:opacity-70 transition-opacity flex items-center">
+              <AppleLogo className="w-[14px] h-[44px]" />
           </a>
 
-          {/* Auth Section */}
-          {!loadingAuth && (
-            <>
-              {!isAuthed ? (
-                <a 
-                  href={authConfig.login.url}
-                  className="hover:opacity-70 transition-opacity flex items-center"
-                  aria-label="Login"
-                >
-                  <User className="w-[14px] h-[44px]" />
-                </a>
-              ) : (
-                <div className="relative profile-dropdown">
-                  <button
-                    onClick={() => setShowDropdown(!showDropdown)}
-                    className="hover:opacity-70 transition-opacity flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-semibold text-gray-800"
-                    aria-label="Profile"
-                    title={profile?.fullName}
-                  >
-                    {profile?.profileImage ? (
-                      <img 
-                        src={profile.profileImage} 
-                        alt={profile.fullName}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      getInitials()
-                    )}
-                  </button>
+          {/* Navigation Links - Desktop Only */}
+          <div className="hidden lg:flex items-center space-x-8">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="hover:opacity-70 transition-opacity whitespace-nowrap"
+              >
+                {item.name}
+              </a>
+            ))}
+          </div>
 
-                  {showDropdown && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 text-sm">
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="font-semibold text-gray-900">{profile?.fullName}</p>
-                        <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
-                      </div>
-                      <a 
-                        href="/profile"
-                        className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                      >
-                        <UserCircle className="w-4 h-4 mr-2" />
-                        <span>Profile</span>
-                      </a>
-                      <div className="border-t border-gray-200 mt-1 pt-1">
-                        <a
-                          href={authConfig.logout.url}
-                          className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600"
+          {/* Right Icons */}
+          <div className="flex items-center space-x-4">
+            {/* Search Icon - Hidden on small mobile */}
+            <button 
+              className="hidden sm:block hover:opacity-70 transition-opacity"
+              aria-label="Search"
+            >
+              <Search className="w-[14px] h-[44px]" />
+            </button>
+
+            {/* Shopping Bag Icon */}
+            <a 
+              href="/card" 
+              className="hover:opacity-70 transition-opacity"
+              aria-label="Shopping Bag"
+            >
+              <BagIcon className="w-[16px] h-[46px]" />
+            </a>
+
+            {/* Auth Section - Desktop */}
+            {!loadingAuth && (
+              <>
+                {!isAuthed ? (
+                  <a 
+                    href={authConfig.login.url}
+                    className="hidden lg:flex hover:opacity-70 transition-opacity items-center"
+                    aria-label="Login"
+                  >
+                    <User className="w-[14px] h-[44px]" />
+                  </a>
+                ) : (
+                  <div className="hidden lg:block relative profile-dropdown">
+                    <button
+                      onClick={() => setShowDropdown(!showDropdown)}
+                      className="hover:opacity-70 transition-opacity flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-semibold text-gray-800"
+                      aria-label="Profile"
+                      title={profile?.fullName}
+                    >
+                      {profile?.profileImage ? (
+                        <img 
+                          src={profile.profileImage} 
+                          alt={profile.fullName}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        getInitials()
+                      )}
+                    </button>
+
+                    {showDropdown && (
+                      <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 text-sm">
+                        <div className="px-4 py-3 border-b border-gray-200">
+                          <p className="font-semibold text-gray-900">{profile?.fullName}</p>
+                          <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
+                        </div>
+                        <a 
+                          href="/profile"
+                          className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
                         >
-                          <LogOut className="w-4 h-4 mr-2" />
-                          <span>{authConfig.logout.title}</span>
+                          <UserCircle className="w-4 h-4 mr-2" />
+                          <span>Profile</span>
                         </a>
+                        <div className="border-t border-gray-200 mt-1 pt-1">
+                          <a
+                            href={authConfig.logout.url}
+                            className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600"
+                          >
+                            <LogOut className="w-4 h-4 mr-2" />
+                            <span>{authConfig.logout.title}</span>
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Mobile Menu Button */}
+            <button 
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="lg:hidden hover:opacity-70 transition-opacity"
+              aria-label="Menu"
+            >
+              {showMobileMenu ? (
+                <X className="w-[14px] h-[44px]" />
+              ) : (
+                <svg 
+                  className="w-[14px] h-[44px]" 
+                  viewBox="0 0 14 44" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    fill="currentColor" 
+                    d="M1 16h12v1H1v-1zm0 6h12v1H1v-1zm0 6h12v1H1v-1z"
+                  />
+                </svg>
               )}
-            </>
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      {showMobileMenu && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setShowMobileMenu(false)}
+        />
+      )}
+
+      {/* Mobile Menu */}
+      <div 
+        className={`fixed top-[44px] left-0 right-0 bg-white z-40 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          showMobileMenu ? 'translate-y-0' : '-translate-y-full'
+        }`}
+        style={{ maxHeight: 'calc(100vh - 44px)', overflowY: 'auto' }}
+      >
+        <div className="px-5 py-6 space-y-4">
+          {/* Search on Mobile (visible only on xs screens) */}
+          <div className="sm:hidden pb-4 border-b border-gray-200">
+            <button 
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors"
+              aria-label="Search"
+            >
+              <Search className="w-4 h-4" />
+              <span className="text-sm">Search</span>
+            </button>
+          </div>
+
+          {/* Profile Section - Mobile */}
+          {!loadingAuth && isAuthed && profile && (
+            <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-sm font-semibold text-gray-800">
+                {profile.profileImage ? (
+                  <img 
+                    src={profile.profileImage} 
+                    alt={profile.fullName}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  getInitials()
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{profile.fullName}</p>
+                <p className="text-xs text-gray-500">{profile.email}</p>
+              </div>
+            </div>
           )}
 
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden hover:opacity-70 transition-opacity"
-            aria-label="Menu"
-          >
-            <svg 
-              className="w-[14px] h-[44px]" 
-              viewBox="0 0 14 44" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                fill="currentColor" 
-                d="M11 22c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2V22zm-1 13c0 .6-.4 1-1 1H5c-.6 0-1-.4-1-1V22c0-.6.4-1 1-1h4c.6 0 1 .4 1 1v13zM9.5 16.5c0-1.93-1.57-3.5-3.5-3.5S2.5 14.57 2.5 16.5V19h1v-2.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5V19h1v-2.5z"
-              />
-            </svg>
-          </button>
+          {/* Navigation Links */}
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="block py-3 text-base font-medium text-gray-900 hover:text-gray-600 transition-colors border-b border-gray-100 last:border-0"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                {item.name}
+              </a>
+            ))}
+          </nav>
 
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden hover:opacity-70 transition-opacity"
-            aria-label="Menu"
-          >
-            <svg 
-              className="w-[14px] h-[44px]" 
-              viewBox="0 0 14 44" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                fill="currentColor" 
-                d="M1 16h12v1H1v-1zm0 6h12v1H1v-1zm0 6h12v1H1v-1z"
-              />
-            </svg>
-          </button>
+          {/* Auth Buttons - Mobile */}
+          {!loadingAuth && (
+            <div className="pt-4 space-y-3 border-t border-gray-200">
+              {isAuthed ? (
+                <>
+                  <a 
+                    href="/profile"
+                    className="flex items-center space-x-2 py-2 text-base text-gray-900 hover:text-gray-600 transition-colors"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <UserCircle className="w-5 h-5" />
+                    <span>Profile</span>
+                  </a>
+                  <a
+                    href={authConfig.logout.url}
+                    className="flex items-center space-x-2 py-2 text-base text-red-600 hover:text-red-700 transition-colors"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>{authConfig.logout.title}</span>
+                  </a>
+                </>
+              ) : (
+                <a 
+                  href={authConfig.login.url}
+                  className="flex items-center space-x-2 py-2 text-base text-blue-600 hover:text-blue-700 transition-colors font-medium"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <User className="w-5 h-5" />
+                  <span>{authConfig.login.title}</span>
+                </a>
+              )}
+            </div>
+          )}
         </div>
-      </nav>
-    </header>
+      </div>
+    </>
   );
 }
