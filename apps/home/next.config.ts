@@ -7,25 +7,21 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@repo/ui'],
   async rewrites() {
     return [
-      // {
-      //   source: '/mac',
-      //   destination: process.env.NEXT_PUBLIC_URL_MAC + '/mac',
-      // },
       {
         source: '/mac/:path*',
-        destination: `${process.env.URL_MAC}/mac/:path*`,
+        destination: `${process.env.URL_MAC}/:path*`,
       },
       {
         source: '/store/:path*',
-        destination: `${process.env.URL_STORE}/store/:path*`,
+        destination: `${process.env.URL_STORE}/:path*`,
       },
       {
         source: '/profile/:path*',
-        destination: `${process.env.URL_PROFILE}/profile/:path*`,
+        destination: `${process.env.URL_PROFILE}/:path*`,
       },
       {
         source: '/card/:path*',
-        destination: `${process.env.URL_CARD}/card/:path*`,
+        destination: `${process.env.URL_CARD}/:path*`,
       },
     ];
   },
