@@ -1,54 +1,45 @@
 import type { NextConfig } from "next";
 
-const isProd = process.env.NODE_ENV === 'production';
-
 const nextConfig: NextConfig = {
-  images: {
-    unoptimized: true,  
-  },
-  transpilePackages: ['@repo/ui'],
   async rewrites() {
-    if (isProd) {
-      // Production - use deployed Vercel URLs
-      return [
-        {
-          source: '/mac/:path*',
-          destination: 'https://multi-zones-nextjs-mac.vercel.app/:path*',
-        },
-        {
-          source: '/store/:path*',
-          destination: 'https://multi-zones-nextjs-store.vercel.app/:path*',
-        },
-        {
-          source: '/profile/:path*',
-          destination: 'https://multi-zones-nextjs-profile.vercel.app/:path*',
-        },
-        {
-          source: '/card/:path*',
-          destination: 'https://multi-zones-nextjs-card.vercel.app/:path*',
-        },
-      ];
-    } else {
-      // Local development - use localhost with basePath
-      return [
-        {
-          source: '/mac/:path*',
-          destination: 'http://localhost:3001/mac/:path*',
-        },
-        {
-          source: '/store/:path*',
-          destination: 'http://localhost:3002/store/:path*',
-        },
-        {
-          source: '/profile/:path*',
-          destination: 'http://localhost:3003/profile/:path*',
-        },
-        {
-          source: '/card/:path*',
-          destination: 'http://localhost:3004/card/:path*',
-        },
-      ];
-    }
+    return [
+      /**
+       * MAC ROUTE
+       */
+      {
+        source: "/mac",
+        destination: `${process.env.MAC_DOMAIN}/mac`,
+      },
+      {
+        source: "/mac/:path*",
+        destination: `${process.env.MAC_DOMAIN}/mac/:path*`,
+      },
+      {
+        source: "/store",
+        destination: `${process.env.STORE_DOMAIN}/store`,
+      },
+      {
+        source: "/store/:path*",
+        destination: `${process.env.STORE_DOMAIN}/store/:path*`,
+      },
+      /** */
+      {
+        source: "/card",
+        destination: `${process.env.CARD_DOMAIN}/card`,
+      },
+      {
+        source: "/card/:path*",
+        destination: `${process.env.CARD_DOMAIN}/card/:path*`,
+      },
+            {
+        source: "/profile",
+        destination: `${process.env.PROFILE_DOMAIN}/profile`,
+      },
+      {
+        source: "/profile/:path*",
+        destination: `${process.env.PROFILE_DOMAIN}/profile/:path*`,
+      }
+    ];
   },
 };
 
