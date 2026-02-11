@@ -1,29 +1,54 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig: NextConfig = {
   images: {
     unoptimized: true,  
   },
   transpilePackages: ['@repo/ui'],
   async rewrites() {
-    return [
-      {
-        source: '/mac/:path*',
-        destination: `${process.env.URL_MAC}/:path*`,
-      },
-      {
-        source: '/store/:path*',
-        destination: `${process.env.URL_STORE}/:path*`,
-      },
-      {
-        source: '/profile/:path*',
-        destination: `${process.env.URL_PROFILE}/:path*`,
-      },
-      {
-        source: '/card/:path*',
-        destination: `${process.env.URL_CARD}/:path*`,
-      },
-    ];
+    if (isProd) {
+      // Production - use deployed Vercel URLs
+      return [
+        {
+          source: '/mac/:path*',
+          destination: 'https://multi-zones-nextjs-mac.vercel.app/:path*',
+        },
+        {
+          source: '/store/:path*',
+          destination: 'https://multi-zones-nextjs-store.vercel.app/:path*',
+        },
+        {
+          source: '/profile/:path*',
+          destination: 'https://multi-zones-nextjs-profile.vercel.app/:path*',
+        },
+        {
+          source: '/card/:path*',
+          destination: 'https://multi-zones-nextjs-card.vercel.app/:path*',
+        },
+      ];
+    } else {
+      // Local development - use localhost with basePath
+      return [
+        {
+          source: '/mac/:path*',
+          destination: 'http://localhost:3001/mac/:path*',
+        },
+        {
+          source: '/store/:path*',
+          destination: 'http://localhost:3002/store/:path*',
+        },
+        {
+          source: '/profile/:path*',
+          destination: 'http://localhost:3003/profile/:path*',
+        },
+        {
+          source: '/card/:path*',
+          destination: 'http://localhost:3004/card/:path*',
+        },
+      ];
+    }
   },
 };
 
