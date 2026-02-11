@@ -27,9 +27,22 @@ interface ProfileData {
 }
 
 export function Header({ zones, auth }: AppleHeaderProps) {
+  // Initialize from cache to prevent shake on navigation
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [isAuthed, setIsAuthed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('auth_status');
+      return cached === 'true';
+    }
+    return false;
+  });
+  const [profile, setProfile] = useState<ProfileData | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('user_profile');
+      return cached ? JSON.parse(cached) : null;
+    }
+    return null;
+  });
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -71,14 +84,23 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           const data = await response.json();
           setIsAuthed(true);
           setProfile(data);
+          // Cache the auth state
+          sessionStorage.setItem('auth_status', 'true');
+          sessionStorage.setItem('user_profile', JSON.stringify(data));
         } else {
           setIsAuthed(false);
           setProfile(null);
+          // Clear the cache
+          sessionStorage.removeItem('auth_status');
+          sessionStorage.removeItem('user_profile');
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
         setIsAuthed(false);
         setProfile(null);
+        // Clear the cache on error
+        sessionStorage.removeItem('auth_status');
+        sessionStorage.removeItem('user_profile');
       } finally {
         setLoadingAuth(false);
       }
@@ -162,62 +184,58 @@ export function Header({ zones, auth }: AppleHeaderProps) {
             </a>
 
             {/* Auth Section - Desktop */}
-            {!loadingAuth && (
-              <>
-                {!isAuthed ? (
-                  <a 
-                    href={authConfig.login.url}
-                    className="hidden lg:flex hover:opacity-70 transition-opacity items-center"
-                    aria-label="Login"
-                  >
-                    <User className="w-[14px] h-[44px]" />
-                  </a>
-                ) : (
-                  <div className="hidden lg:block relative profile-dropdown">
-                    <button
-                      onClick={() => setShowDropdown(!showDropdown)}
-                      className="hover:opacity-70 transition-opacity flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-semibold text-gray-800"
-                      aria-label="Profile"
-                      title={profile?.fullName}
-                    >
-                      {profile?.profileImage ? (
-                        <img 
-                          src={profile.profileImage} 
-                          alt={profile.fullName}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        getInitials()
-                      )}
-                    </button>
+            {!isAuthed ? (
+              <a 
+                href={authConfig.login.url}
+                className="hidden lg:flex hover:opacity-70 transition-opacity items-center"
+                aria-label="Login"
+              >
+                <User className="w-[14px] h-[44px]" />
+              </a>
+            ) : (
+              <div className="hidden lg:block relative profile-dropdown">
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="hover:opacity-70 transition-opacity flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-semibold text-gray-800"
+                  aria-label="Profile"
+                  title={profile?.fullName}
+                >
+                  {profile?.profileImage ? (
+                    <img 
+                      src={profile.profileImage} 
+                      alt={profile.fullName}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    getInitials()
+                  )}
+                </button>
 
-                    {showDropdown && (
-                      <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 text-sm">
-                        <div className="px-4 py-3 border-b border-gray-200">
-                          <p className="font-semibold text-gray-900">{profile?.fullName}</p>
-                          <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
-                        </div>
-                        <a 
-                          href="/profile"
-                          className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
-                          <UserCircle className="w-4 h-4 mr-2" />
-                          <span>Profile</span>
-                        </a>
-                        <div className="border-t border-gray-200 mt-1 pt-1">
-                          <a
-                            href={authConfig.logout.url}
-                            className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600"
-                          >
-                            <LogOut className="w-4 h-4 mr-2" />
-                            <span>{authConfig.logout.title}</span>
-                          </a>
-                        </div>
-                      </div>
-                    )}
+                {showDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 text-sm">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="font-semibold text-gray-900">{profile?.fullName}</p>
+                      <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
+                    </div>
+                    <a 
+                      href="/profile"
+                      className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <UserCircle className="w-4 h-4 mr-2" />
+                      <span>Profile</span>
+                    </a>
+                    <div className="border-t border-gray-200 mt-1 pt-1">
+                      <a
+                        href={authConfig.logout.url}
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        <span>{authConfig.logout.title}</span>
+                      </a>
+                    </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Mobile Menu Button */}
@@ -273,7 +291,7 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           </div>
 
           {/* Profile Section - Mobile */}
-          {!loadingAuth && isAuthed && profile && (
+          {isAuthed && profile && (
             <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-sm font-semibold text-gray-800">
                 {profile.profileImage ? (
@@ -308,39 +326,37 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           </nav>
 
           {/* Auth Buttons - Mobile */}
-          {!loadingAuth && (
-            <div className="pt-4 space-y-3 border-t border-gray-200">
-              {isAuthed ? (
-                <>
-                  <a 
-                    href="/profile"
-                    className="flex items-center space-x-2 py-2 text-base text-gray-900 hover:text-gray-600 transition-colors"
-                    onClick={() => setShowMobileMenu(false)}
-                  >
-                    <UserCircle className="w-5 h-5" />
-                    <span>Profile</span>
-                  </a>
-                  <a
-                    href={authConfig.logout.url}
-                    className="flex items-center space-x-2 py-2 text-base text-red-600 hover:text-red-700 transition-colors"
-                    onClick={() => setShowMobileMenu(false)}
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>{authConfig.logout.title}</span>
-                  </a>
-                </>
-              ) : (
+          <div className="pt-4 space-y-3 border-t border-gray-200">
+            {isAuthed ? (
+              <>
                 <a 
-                  href={authConfig.login.url}
-                  className="flex items-center space-x-2 py-2 text-base text-blue-600 hover:text-blue-700 transition-colors font-medium"
+                  href="/profile"
+                  className="flex items-center space-x-2 py-2 text-base text-gray-900 hover:text-gray-600 transition-colors"
                   onClick={() => setShowMobileMenu(false)}
                 >
-                  <User className="w-5 h-5" />
-                  <span>{authConfig.login.title}</span>
+                  <UserCircle className="w-5 h-5" />
+                  <span>Profile</span>
                 </a>
-              )}
-            </div>
-          )}
+                <a
+                  href={authConfig.logout.url}
+                  className="flex items-center space-x-2 py-2 text-base text-red-600 hover:text-red-700 transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>{authConfig.logout.title}</span>
+                </a>
+              </>
+            ) : (
+              <a 
+                href={authConfig.login.url}
+                className="flex items-center space-x-2 py-2 text-base text-blue-600 hover:text-blue-700 transition-colors font-medium"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <User className="w-5 h-5" />
+                <span>{authConfig.login.title}</span>
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </>
