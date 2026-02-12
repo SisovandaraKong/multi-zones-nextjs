@@ -7,6 +7,7 @@
     "./button": "./src/button.tsx",
     "./code": "./src/code.tsx",
     "./header": "./src/header.tsx",
+    "./cart-dropdown": "./src/cart-dropdown.tsx",
     "./components/icon/AppleLogo": "./src/components/icon/AppleIcon.tsx",
     "./components/icon/Bag": "./src/components/icon/BagIcon.tsx",
     "./home/valentine-hero": "./src/home/valentine-hero.tsx",
@@ -32,6 +33,7 @@
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "lucide-react": "^0.469.0"
+    "lucide-react": "^0.469.0",
+    "@repo/store": "*"
   }
 }

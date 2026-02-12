@@ -3,7 +3,9 @@
 import { Search, User, LogOut, UserCircle, X } from "lucide-react";
 import { AppleLogo } from "./components/icon/AppleLogo";
 import { BagIcon } from "./components/icon/BagIcon";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { CartDropdown } from "./cart-dropdown";
+import { useAppSelector } from "@repo/store";
 
 interface AppleHeaderProps {
   zones?: { name: string; href: string }[];
@@ -27,8 +29,10 @@ interface ProfileData {
 }
 
 export function Header({ zones, auth }: AppleHeaderProps) {
+  // Track if we've already fetched in this session to prevent refetching on navigation
+  const hasFetchedRef = useRef(false);
+  
   // Initialize from cache to prevent shake on navigation
-  const [loadingAuth, setLoadingAuth] = useState(true);
   const [isAuthed, setIsAuthed] = useState(() => {
     if (typeof window !== 'undefined') {
       const cached = sessionStorage.getItem('auth_status');
@@ -39,12 +43,20 @@ export function Header({ zones, auth }: AppleHeaderProps) {
   const [profile, setProfile] = useState<ProfileData | null>(() => {
     if (typeof window !== 'undefined') {
       const cached = sessionStorage.getItem('user_profile');
-      return cached ? JSON.parse(cached) : null;
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch {
+          return null;
+        }
+      }
     }
     return null;
   });
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const { totalItems } = useAppSelector((state) => state.cart);
 
   const defaultAuth = {
     login: {
@@ -76,33 +88,61 @@ export function Header({ zones, auth }: AppleHeaderProps) {
   const navItems = zones || defaultZones;
 
   useEffect(() => {
+    // Only fetch if we haven't already fetched in this session
+    if (hasFetchedRef.current) {
+      return;
+    }
+
+    // Check if we have valid cached data
+    const cachedAuth = sessionStorage.getItem('auth_status');
+    const cachedProfile = sessionStorage.getItem('user_profile');
+    const lastFetch = sessionStorage.getItem('auth_last_fetch');
+    
+    // If cache is fresh (less than 5 minutes old), don't refetch
+    if (cachedAuth && cachedProfile && lastFetch) {
+      const fiveMinutes = 5 * 60 * 1000;
+      const lastFetchTime = parseInt(lastFetch, 10);
+      if (Date.now() - lastFetchTime < fiveMinutes) {
+        hasFetchedRef.current = true;
+        return;
+      }
+    }
+
     async function checkAuthAndFetchProfile() {
       try {
         const response = await fetch("/auth/me", { credentials: "include" });
         
         if (response.ok) {
           const data = await response.json();
-          setIsAuthed(true);
-          setProfile(data);
-          // Cache the auth state
-          sessionStorage.setItem('auth_status', 'true');
-          sessionStorage.setItem('user_profile', JSON.stringify(data));
+          
+          // Only update if data actually changed to prevent unnecessary re-renders
+          const cachedData = sessionStorage.getItem('user_profile');
+          const newProfileStr = JSON.stringify(data);
+          
+          if (cachedData !== newProfileStr) {
+            setIsAuthed(true);
+            setProfile(data);
+            // Cache the auth state with timestamp
+            sessionStorage.setItem('auth_status', 'true');
+            sessionStorage.setItem('user_profile', newProfileStr);
+            sessionStorage.setItem('auth_last_fetch', Date.now().toString());
+          }
         } else {
-          setIsAuthed(false);
-          setProfile(null);
-          // Clear the cache
-          sessionStorage.removeItem('auth_status');
-          sessionStorage.removeItem('user_profile');
+          // Only clear if currently authenticated to prevent flicker
+          const currentAuth = sessionStorage.getItem('auth_status');
+          if (currentAuth === 'true') {
+            setIsAuthed(false);
+            setProfile(null);
+            sessionStorage.removeItem('auth_status');
+            sessionStorage.removeItem('user_profile');
+            sessionStorage.removeItem('auth_last_fetch');
+          }
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
-        setIsAuthed(false);
-        setProfile(null);
-        // Clear the cache on error
-        sessionStorage.removeItem('auth_status');
-        sessionStorage.removeItem('user_profile');
+        // Don't clear state on error to prevent flicker
       } finally {
-        setLoadingAuth(false);
+        hasFetchedRef.current = true;
       }
     }
 
@@ -133,14 +173,46 @@ export function Header({ zones, auth }: AppleHeaderProps) {
     };
   }, [showMobileMenu]);
 
-  const getInitials = () => {
-    if (!profile?.fullName) return "U";
-    const names = profile.fullName.split(" ");
-    if (names.length >= 2) {
-      return `${names[0]?.[0] ?? ''}${names[names.length - 1]?.[0] ?? ''}`.toUpperCase();
+  // Preload profile image to prevent flicker
+  useEffect(() => {
+    if (profile?.profileImage) {
+      const img = new Image();
+      img.src = profile.profileImage;
     }
-    return profile.fullName.substring(0, 2).toUpperCase();
-  };
+  }, [profile?.profileImage]);
+
+  const getInitials = useMemo(() => {
+    return () => {
+      if (!profile?.fullName) return "U";
+      const names = profile.fullName.split(" ");
+      if (names.length >= 2) {
+        return `${names[0]?.[0] ?? ''}${names[names.length - 1]?.[0] ?? ''}`.toUpperCase();
+      }
+      return profile.fullName.substring(0, 2).toUpperCase();
+    };
+  }, [profile?.fullName]);
+
+  // Memoize profile avatar to prevent re-renders
+  const ProfileAvatar = useMemo(() => {
+    return ({ size = 'w-8 h-8', textSize = 'text-xs' }: { size?: string; textSize?: string }) => (
+      <div className={`flex items-center justify-center ${size} rounded-full bg-gray-200 ${textSize} font-semibold text-gray-800`}>
+        {profile?.profileImage ? (
+          <img 
+            key={profile.profileImage}
+            src={profile.profileImage} 
+            alt={profile.fullName || 'Profile'}
+            className="w-full h-full rounded-full object-cover"
+            loading="eager"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          getInitials()
+        )}
+      </div>
+    );
+  }, [profile?.profileImage, profile?.fullName, getInitials]);
 
   return (
     <>
@@ -175,13 +247,18 @@ export function Header({ zones, auth }: AppleHeaderProps) {
             </button>
 
             {/* Shopping Bag Icon */}
-            <a 
-              href="/card" 
-              className="hover:opacity-70 transition-opacity"
+            <button
+              onClick={() => setShowCart(true)}
+              className="hover:opacity-70 transition-opacity relative"
               aria-label="Shopping Bag"
             >
               <BagIcon className="w-[16px] h-[46px]" />
-            </a>
+              {totalItems > 0 && (
+                <span className="absolute top-6 right-1 right-0 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-md">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
+            </button>
 
             {/* Auth Section - Desktop */}
             {!isAuthed ? (
@@ -196,19 +273,11 @@ export function Header({ zones, auth }: AppleHeaderProps) {
               <div className="hidden lg:block relative profile-dropdown">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="hover:opacity-70 transition-opacity flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-xs font-semibold text-gray-800"
+                  className="hover:opacity-70 transition-opacity"
                   aria-label="Profile"
                   title={profile?.fullName}
                 >
-                  {profile?.profileImage ? (
-                    <img 
-                      src={profile.profileImage} 
-                      alt={profile.fullName}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    getInitials()
-                  )}
+                  <ProfileAvatar />
                 </button>
 
                 {showDropdown && (
@@ -293,17 +362,7 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           {/* Profile Section - Mobile */}
           {isAuthed && profile && (
             <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-sm font-semibold text-gray-800">
-                {profile.profileImage ? (
-                  <img 
-                    src={profile.profileImage} 
-                    alt={profile.fullName}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  getInitials()
-                )}
-              </div>
+              <ProfileAvatar size="w-10 h-10" textSize="text-sm" />
               <div>
                 <p className="text-sm font-semibold text-gray-900">{profile.fullName}</p>
                 <p className="text-xs text-gray-500">{profile.email}</p>
@@ -359,6 +418,9 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           </div>
         </div>
       </div>
+
+      {/* Cart Dropdown */}
+      <CartDropdown isOpen={showCart} onClose={() => setShowCart(false)} />
     </>
   );
 }

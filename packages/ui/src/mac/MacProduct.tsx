@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useAppDispatch } from "@repo/store";
+import { addToCart } from "@repo/store";
 
 interface MacProduct {
   id: number;
@@ -15,6 +17,8 @@ interface MacProduct {
 
 export function MacProducts() {
   const [activeFilter, setActiveFilter] = useState<string>("All products");
+  const [selectedColors, setSelectedColors] = useState<{ [key: number]: number }>({});
+  const dispatch = useAppDispatch();
 
   const products: MacProduct[] = [
     {
@@ -65,6 +69,20 @@ export function MacProducts() {
     product.category.includes(activeFilter)
   );
 
+  const handleAddToCart = (product: MacProduct) => {
+    const selectedColorIndex = selectedColors[product.id] ?? 0;
+    const selectedColor = product.colors[selectedColorIndex];
+    
+    dispatch(addToCart({
+      id: product.id.toString(),
+      name: product.name,
+      price: parseInt(product.price.replace(/[^0-9]/g, '')) || 999,
+      image: product.image,
+      color: selectedColor || undefined,
+      category: 'mac',
+    }));
+  };
+
   return (
     <section className="bg-white py-16 px-4">
       <div className="max-w-screen-2xl mx-auto">
@@ -113,7 +131,12 @@ export function MacProducts() {
                     {product.colors.map((color, index) => (
                       <button
                         key={index}
-                        className="w-3 h-3 rounded-full border border-gray-300 hover:scale-125 transition-transform"
+                        onClick={() => setSelectedColors({ ...selectedColors, [product.id]: index })}
+                        className={`w-3 h-3 rounded-full border-2 hover:scale-125 transition-transform ${
+                          (selectedColors[product.id] ?? 0) === index
+                            ? 'border-blue-600'
+                            : 'border-gray-300'
+                        }`}
                         style={{ backgroundColor: color }}
                         aria-label={`Color option ${index + 1}`}
                       />
@@ -137,17 +160,17 @@ export function MacProducts() {
 
                 {/* Buttons */}
                 <div className="flex gap-3 mt-auto">
-                  <a
-                    href={`/mac/${product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                  <button
+                    onClick={() => handleAddToCart(product)}
                     className="px-5 py-2 bg-[#0071e3] text-white rounded-full text-sm font-normal hover:bg-[#0077ed] transition-colors"
                   >
-                    Learn more
-                  </a>
+                    Add to Cart
+                  </button>
                   <a
-                    href={`/shop/buy-${product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                    href={`/mac/${product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                     className="px-5 py-2 text-[#0066cc] text-sm font-normal hover:underline flex items-center gap-1"
                   >
-                    Buy
+                    Learn more
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
