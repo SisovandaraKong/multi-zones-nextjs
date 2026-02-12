@@ -219,17 +219,17 @@ export function Header({ zones, auth }: AppleHeaderProps) {
       <header className="bg-white backdrop-blur-xl text-[#1d1d1f] sticky top-0 z-50 border-b border-gray-200/50">
         <nav className="max-w-[980px] mx-auto px-5 h-11 flex items-center justify-between text-xs">
           {/* Apple Logo */}
-          <a href="/" className="hover:opacity-70 transition-opacity flex items-center">
+          <a href="/" className="hover:opacity-70 transition-opacity flex items-center flex-shrink-0">
               <AppleLogo className="w-[14px] h-[44px]" />
           </a>
 
           {/* Navigation Links - Desktop Only */}
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-4 xl:space-x-7 2xl:space-x-8">
             {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="hover:opacity-70 transition-opacity whitespace-nowrap"
+                className="hover:opacity-70 transition-opacity whitespace-nowrap text-[11px] xl:text-xs"
               >
                 {item.name}
               </a>
@@ -237,7 +237,7 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           </div>
 
           {/* Right Icons */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 lg:space-x-4 flex-shrink-0">
             {/* Search Icon - Hidden on small mobile */}
             <button 
               className="hidden sm:block hover:opacity-70 transition-opacity"
@@ -254,7 +254,7 @@ export function Header({ zones, auth }: AppleHeaderProps) {
             >
               <BagIcon className="w-[16px] h-[46px]" />
               {totalItems > 0 && (
-                <span className="absolute top-6 right-1 right-0 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-md">
+                <span className="absolute top-3 right-0 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-md">
                   {totalItems > 9 ? '9+' : totalItems}
                 </span>
               )}
