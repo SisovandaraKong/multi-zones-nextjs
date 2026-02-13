@@ -5,7 +5,7 @@ import { AppleLogo } from "./components/icon/AppleLogo";
 import { BagIcon } from "./components/icon/BagIcon";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { CartDropdown } from "./cart-dropdown";
-import { useAppSelector } from "@repo/store";
+import { useAppSelector, useAppDispatch, fetchProfile, clearProfile, clearCart } from "@repo/store";
 
 interface AppleHeaderProps {
   zones?: { name: string; href: string }[];
@@ -21,42 +21,19 @@ interface AppleHeaderProps {
   };
 }
 
-interface ProfileData {
-  username: string;
-  email: string;
-  fullName: string;
-  profileImage: string;
-}
-
 export function Header({ zones, auth }: AppleHeaderProps) {
-  // Track if we've already fetched in this session to prevent refetching on navigation
+  const dispatch = useAppDispatch();
   const hasFetchedRef = useRef(false);
   
-  // Initialize from cache to prevent shake on navigation
-  const [isAuthed, setIsAuthed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const cached = sessionStorage.getItem('auth_status');
-      return cached === 'true';
-    }
-    return false;
-  });
-  const [profile, setProfile] = useState<ProfileData | null>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = sessionStorage.getItem('user_profile');
-      if (cached) {
-        try {
-          return JSON.parse(cached);
-        } catch {
-          return null;
-        }
-      }
-    }
-    return null;
-  });
+  // Use RTK selectors for profile state
+  const profile = useAppSelector((state) => state.profile.data);
+  const isAuthed = useAppSelector((state) => state.profile.isAuthenticated);
+  const lastFetch = useAppSelector((state) => state.profile.lastFetch);
+  const { totalItems } = useAppSelector((state) => state.cart);
+  
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCart, setShowCart] = useState(false);
-  const { totalItems } = useAppSelector((state) => state.cart);
 
   const defaultAuth = {
     login: {
@@ -87,67 +64,35 @@ export function Header({ zones, auth }: AppleHeaderProps) {
 
   const navItems = zones || defaultZones;
 
+  const handleLogout = () => {
+    // Clear all state before logout
+    dispatch(clearProfile());
+    dispatch(clearCart());
+    hasFetchedRef.current = false;
+    
+    // Navigate to logout endpoint
+    window.location.href = authConfig.logout.url;
+  };
+
   useEffect(() => {
     // Only fetch if we haven't already fetched in this session
     if (hasFetchedRef.current) {
       return;
     }
 
-    // Check if we have valid cached data
-    const cachedAuth = sessionStorage.getItem('auth_status');
-    const cachedProfile = sessionStorage.getItem('user_profile');
-    const lastFetch = sessionStorage.getItem('auth_last_fetch');
-    
     // If cache is fresh (less than 5 minutes old), don't refetch
-    if (cachedAuth && cachedProfile && lastFetch) {
+    if (lastFetch) {
       const fiveMinutes = 5 * 60 * 1000;
-      const lastFetchTime = parseInt(lastFetch, 10);
-      if (Date.now() - lastFetchTime < fiveMinutes) {
+      if (Date.now() - lastFetch < fiveMinutes) {
         hasFetchedRef.current = true;
         return;
       }
     }
 
-    async function checkAuthAndFetchProfile() {
-      try {
-        const response = await fetch("/auth/me", { credentials: "include" });
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Only update if data actually changed to prevent unnecessary re-renders
-          const cachedData = sessionStorage.getItem('user_profile');
-          const newProfileStr = JSON.stringify(data);
-          
-          if (cachedData !== newProfileStr) {
-            setIsAuthed(true);
-            setProfile(data);
-            // Cache the auth state with timestamp
-            sessionStorage.setItem('auth_status', 'true');
-            sessionStorage.setItem('user_profile', newProfileStr);
-            sessionStorage.setItem('auth_last_fetch', Date.now().toString());
-          }
-        } else {
-          // Only clear if currently authenticated to prevent flicker
-          const currentAuth = sessionStorage.getItem('auth_status');
-          if (currentAuth === 'true') {
-            setIsAuthed(false);
-            setProfile(null);
-            sessionStorage.removeItem('auth_status');
-            sessionStorage.removeItem('user_profile');
-            sessionStorage.removeItem('auth_last_fetch');
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        // Don't clear state on error to prevent flicker
-      } finally {
-        hasFetchedRef.current = true;
-      }
-    }
-
-    checkAuthAndFetchProfile();
-  }, []);
+    // Fetch profile using RTK thunk
+    dispatch(fetchProfile('/auth/me'));
+    hasFetchedRef.current = true;
+  }, [dispatch, lastFetch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -222,7 +167,6 @@ export function Header({ zones, auth }: AppleHeaderProps) {
           <a href="/" className="hover:opacity-70 transition-opacity flex items-center flex-shrink-0">
               <AppleLogo className="w-[14px] h-[44px]" />
           </a>
-
           {/* Navigation Links - Desktop Only */}
           <div className="hidden lg:flex items-center space-x-4 xl:space-x-7 2xl:space-x-8">
             {navItems.map((item) => (
@@ -294,13 +238,13 @@ export function Header({ zones, auth }: AppleHeaderProps) {
                       <span>Profile</span>
                     </a>
                     <div className="border-t border-gray-200 mt-1 pt-1">
-                      <a
-                        href={authConfig.logout.url}
-                        className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600"
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors text-red-600 w-full text-left"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
                         <span>{authConfig.logout.title}</span>
-                      </a>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -396,14 +340,16 @@ export function Header({ zones, auth }: AppleHeaderProps) {
                   <UserCircle className="w-5 h-5" />
                   <span>Profile</span>
                 </a>
-                <a
-                  href={authConfig.logout.url}
-                  className="flex items-center space-x-2 py-2 text-base text-red-600 hover:text-red-700 transition-colors"
-                  onClick={() => setShowMobileMenu(false)}
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center space-x-2 py-2 text-base text-red-600 hover:text-red-700 transition-colors w-full text-left"
                 >
                   <LogOut className="w-5 h-5" />
                   <span>{authConfig.logout.title}</span>
-                </a>
+                </button>
               </>
             ) : (
               <a 

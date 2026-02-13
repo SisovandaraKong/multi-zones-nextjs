@@ -1,48 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@repo/ui/button";
-
-interface ProfileData {
-  uuid: string;
-  username: string;
-  email: string;
-  fullName: string;
-  familyName: string;
-  givenName: string;
-  phoneNumber: string;
-  profileImage: string;
-  gender: string;
-  authorities: string[];
-}
+import { useAppSelector, useAppDispatch, fetchFullProfile, type ProfileData } from "@repo/store";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const profile = useAppSelector((state) => state.profile.data);
+  const loading = useAppSelector((state) => state.profile.loading);
+  const error = useAppSelector((state) => state.profile.error);
+  const isAuthenticated = useAppSelector((state) => state.profile.isAuthenticated);
 
   useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const response = await fetch("/auth/profile", {
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch profile");
-        }
-
-        const data = await response.json();
-        setProfile(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
+    // Fetch full profile if not already loaded
+    if (!profile) {
+      dispatch(fetchFullProfile());
     }
-
-    fetchProfile();
-  }, []);
+  }, [dispatch, profile]);
 
   const getInitials = () => {
     if (!profile) return "U";

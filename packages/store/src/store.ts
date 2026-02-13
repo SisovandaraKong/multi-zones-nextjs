@@ -2,15 +2,17 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import cartReducer from './slices/cartSlice';
+import profileReducer from './slices/profileSlice';
 
 const persistConfig = {
-  key: 'apple-cart',
+  key: 'apple-store',
   storage,
-  whitelist: ['cart'], // Only persist cart
+  whitelist: ['cart', 'profile'], // Persist cart and profile
 };
 
 const rootReducer = combineReducers({
   cart: cartReducer,
+  profile: profileReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

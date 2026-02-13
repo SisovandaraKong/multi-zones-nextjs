@@ -3,9 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
-      /**
-       * MAC ROUTE
-       */
+
       {
         source: "/mac",
         destination: `${process.env.MAC_DOMAIN}/mac`,
@@ -22,7 +20,6 @@ const nextConfig: NextConfig = {
         source: "/store/:path*",
         destination: `${process.env.STORE_DOMAIN}/store/:path*`,
       },
-      /** */
       {
         source: "/card",
         destination: `${process.env.CARD_DOMAIN}/card`,
